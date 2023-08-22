@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>High-Class Chat App</title>
+  <title>Simple Chat App</title>
+  
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
-      padding: 0;
-      background-color: #f5f5f5;
+      font-family: Arial, Helvetica, sans-serif;
     }
 
     #chat-container {
@@ -18,56 +17,55 @@
       height: 100vh;
     }
 
+    #heading {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
     #chat-box {
-      width: 400px;
-      background-color: #fff;
-      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-      border-radius: 5px;
-      overflow: hidden;
+      width: 70%;
+      max-width: 400px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
 
-    #messages {
-      list-style-type: none;
-      margin: 0;
-      padding: 0;
-      overflow-y: scroll;
-      max-height: 300px;
-      padding: 10px;
-    }
-
-    #messages li {
+    .message {
+    
+      border-radius: 10px;
+      padding: 8px 12px;
       margin: 5px 0;
-      padding: 5px;
-      border-radius: 3px;
-      background-color: #f0f0f0;
     }
+    .green-bg{
+      background-color: #DCF8C6;
+    }
+    .white-bg {
+      background-color: rgb(235, 236, 245);
+    }
+   
 
     #form {
       display: flex;
       margin-top: 10px;
-      padding: 10px;
-      background-color: #f5f5f5;
     }
 
     #input {
-      flex-grow: 1;
+      flex: 1;
       padding: 8px;
       border: none;
-      border-radius: 5px 0 0 5px;
-    }
-
-    #input:focus {
-      outline: none;
+      border-radius: 5px;
+      margin-right: 5px;
     }
 
     #send-button {
-      background-color: #007bff;
+      background-color: #007BFF;
       color: white;
       border: none;
-      border-radius: 0 5px 5px 0;
+      border-radius: 5px;
       padding: 8px 15px;
       cursor: pointer;
-      transition: background-color 0.2s;
     }
 
     #send-button:hover {
@@ -78,35 +76,157 @@
 <body>
   <div id="chat-container">
     <div id="chat-box">
-      <ul id="messages"></ul>
+      <h1 id="heading">Simple Chat App</h1>
+      <ul id="messages">
+     
+      </ul>
       <form id="form" action="">
         <input id="input" autocomplete="off" placeholder="Type your message..." />
+        <emoji-picker></emoji-picker>
         <button id="send-button">Send</button>
+
       </form>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    const emojiMap = {
+      hey: '🙋‍♂️',
+      react: '⚛️',
+      woah: '😯',
+      love: '❤️',
+      smile: '😄',
+      laugh: '😆',
+      sad: '😢',
+      wink: '😉',
+      thumbsup: '👍',
+      thumbsdown: '👎',
+      coffee: '☕️',
+      pizza: '🍕',
+      lol: '😂',
+      like: '♥️',
+      congratulations: '🎉',
+      // Add more words and emojis as needed
+    };
+
     const socket = io();
 
     const form = document.getElementById('form');
-    const input = document.getElementById('input');
+    
     const messages = document.getElementById('messages');
+
+    const emojiPicker = document.querySelector('emoji-picker');
+  const input = document.getElementById('input');
+
+  // Handle emoji selection
+  emojiPicker.addEventListener('emoji-click', (event) => {
+    const emoji = event.detail.unicode;
+    input.value += emoji; // Insert emoji into input field
+  });
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      if (input.value) {
-        socket.emit('chat message', input.value);
+      let message = input.value.trim();
+
+      // Check for slash commands
+      if (message.startsWith('/')) {
+        handleSlashCommand(message);
+      } else {
+
+      // Convert message to lowercase and split into words
+      const words = message.toLowerCase().split(/\s+/);
+
+      // Check for word replacements
+      for (let i = 0; i < words.length; i++) {
+        if (emojiMap.hasOwnProperty(words[i])) {
+          words[i] = emojiMap[words[i]];
+        }
+      }
+
+      // Join the words back into a message
+      message = words.join(' ');
+
+      if (message) {
+        socket.emit('chat message', message);
         input.value = '';
       }
+    }
     });
+          // Slash command handling
+        function handleSlashCommand(command) {
+          const parts = command.split(' ');
+            const cmd = parts[0].toLowerCase();
+
+      if (cmd === '/help') {
+        showHelpDetails();
+      } else {
+        const responseMessage = getUserSlashCommandResponse(cmd);
+        if (responseMessage) {
+          addMessage(responseMessage);
+        } else {
+          addMessage('Unknown command. Type /help for available commands.');
+        }
+      }
+        }
+
+          // Display help details as an alert
+    function showHelpDetails() {
+      const helpDetails = `
+        Available commands:\n
+        /help - Display available commands and explanations\n
+        /clear - Clear the chat\n
+        /random - Display a random number
+      `;
+      alert(helpDetails);
+    }
+    
+
+     // User-specific slash command responses
+     function getUserSlashCommandResponse(cmd) {
+      switch (cmd) {
+        case '/help':
+          return 'Available commands:\n/help - Display available commands and explanations\n/clear - Clear the chat\n/random - Display a random number';
+        case '/clear':
+          clearMessages();
+          return 'Chat cleared.';
+        case '/random':
+          return `Random number: ${Math.floor(Math.random() * 100) + 1}`;
+        default:
+          return null;
+      }
+    }
+    function clearMessages() {
+      messages.innerHTML = '';
+    }
+    function sendRandomNumber() {
+      const randomNumber = Math.floor(Math.random() * 100) + 1;
+      addMessage(`Random number: ${randomNumber}`);
+    }
+    function addMessage(message) {
+      const li = document.createElement('li');
+      li.textContent = message;
+      li.classList.add('message', 'green-bg');
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    let greenBackground = true;
 
     socket.on('chat message', (message) => {
       const li = document.createElement('li');
       li.textContent = message;
+
+      if (greenBackground) {
+        li.classList.add('message', 'green-bg');
+      } else {
+        li.classList.add('message', 'white-bg');
+      }
+
+      
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
+      greenBackground = !greenBackground;
     });
   </script>
 </body>
